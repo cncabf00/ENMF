@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -5,6 +6,7 @@ import java.util.Random;
 
 
 public class ENMF {
+	static final String DATA_PATH="data"+File.separator;
 	
 	List<RatingData> training;
 	List<RatingData> testing;
@@ -383,7 +385,7 @@ public class ENMF {
 	
 	static public void run(double lrate1,double lrate2, double lambda,double lambda1,double lambda2, double lambda3,int iteration, boolean print) {
 		ENMF sigmoid=new ENMF();
-		sigmoid.loadData("ratings.dat");
+		sigmoid.loadData(DATA_PATH+"ratings.dat");
 //		sigmoid.loadData("u1.base", "u1.test");
 		sigmoid.normalize();
 		sigmoid.lrate1=lrate1;
@@ -399,8 +401,8 @@ public class ENMF {
 		if (lambda3==0) {
 		} else {
 			sigmoid.lambda3=lambda3;
-			sigmoid.loadMovieData("movies.dat");
-			sigmoid.loadUserData("users.dat");
+			sigmoid.loadMovieData(DATA_PATH+"movies.dat");
+			sigmoid.loadUserData(DATA_PATH+"users.dat");
 		}
 	    sigmoid.initFeatureVector();
 	    double tRMSE=1000;
@@ -428,8 +430,8 @@ public class ENMF {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		Movie.loadGenres("genres.txt");
-		User.loadFeatures("features.txt");
+		Movie.loadGenres(DATA_PATH+"genres.txt");
+		User.loadFeatures(DATA_PATH+"features.txt");
 		double lrate1=1.5;
 		double lrate2=1.5;
 		double lambda=0.02;
