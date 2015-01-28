@@ -86,19 +86,31 @@ public class RatingData {
 		return datas;
 	}
 	
-	public static List<List<RatingData>> split(List<RatingData> origin) {
-		return split(origin,5);
+	public static List<List<List<RatingData>>> split(List<RatingData> origin) {
+		return split(origin,5,true);
 	}
 	
-	public static List<List<RatingData>> split(List<RatingData> origin,int fold) {
+	public static List<List<List<RatingData>>> split(List<RatingData> origin,int fold,boolean normalize) {
+		if (normalize) {
+			for (RatingData data:origin) {
+				data.rating=(data.rating-1)/4;
+			}
+		}
 		Collections.shuffle(origin);
 		double per=(1.0)/fold;
 		int n=(int) (origin.size()*per);
-		List<RatingData> test=origin.subList(0, n);
-		List<RatingData> train=origin.subList(n, origin.size()-1);
-		List<List<RatingData>> result=new ArrayList<>();
-		result.add(train);
-		result.add(test);
+		List<List<List<RatingData>>> result=new ArrayList<>();
+		for (int i=0;i<fold;i++) {
+			List<List<RatingData>> l=new ArrayList<>();
+			List<RatingData> test=new ArrayList<>();
+			test.addAll(origin.subList(i*n, (i+1)*n));
+			List<RatingData> train=new ArrayList<>();
+			train.addAll(origin.subList((i+1)*n, origin.size()-1));
+			train.addAll(origin.subList(0, i*n));
+			l.add(train);
+			l.add(test);
+			result.add(l);
+		}
 		return result;
 	}
 	

@@ -8,6 +8,9 @@ import java.util.Random;
 public class ENMF {
 	static final String DATA_PATH="data"+File.separator;
 	
+	int currentFold=0;
+	int fold=5;
+	List<List<List<RatingData>>> allData;
 	List<RatingData> training;
 	List<RatingData> testing;
 	int userNum,movieNum;
@@ -23,7 +26,7 @@ public class ENMF {
 	double lrate1=0.1;
 	double lrate2=0.3;
 	double lrate3=0.2;
-	double precision=0.001;
+
 	
 	double X[];
 	int K=20;
@@ -40,8 +43,14 @@ public class ENMF {
 	boolean useMovieInfo=false;
 	boolean useUserInfo=false;
 	boolean useBias=false;
-	boolean useSigmoid=true;
 	boolean useSum=true;
+	
+	Function useFunction=Function.Sigmoid;
+	Function movieFunction=Function.Square;
+	
+	double vRMSE=0;
+	double tRMSE=0;
+	
 	
 	Logger logger=new Logger();
 	
@@ -54,39 +63,29 @@ public class ENMF {
 		}
 	}
 	
-	public void loadData(String filename) {
-		List<List<RatingData>> result=RatingData.split(RatingData.readFile1M(filename),5);
-		training=result.get(0);
-		testing=result.get(1);
-		for (RatingData data:training) {
-			if (data.userid>userNum)
-				userNum=data.userid;
-			if (data.itemid>movieNum)
-				movieNum=data.itemid;
-		}
-		for (RatingData data:testing) {
-			if (data.userid>userNum)
-				userNum=data.userid;
-			if (data.itemid>movieNum)
-				movieNum=data.itemid;
-		}
+	public void loadData(String filename,int fold) {
+		allData=RatingData.split(RatingData.readFile1M(filename),fold,true);
+//		currentFold=0;
+//		training=allData.get(currentFold).get(0);
+//		testing=allData.get(currentFold).get(1);
+		
 	}
 	
 	public void loadData(String traingFile,String testingFile) {
 		training=RatingData.readFile(traingFile);
 		testing=RatingData.readFile(testingFile);
-		for (RatingData data:training) {
-			if (data.userid>userNum)
-				userNum=data.userid;
-			if (data.itemid>movieNum)
-				movieNum=data.itemid;
-		}
-		for (RatingData data:testing) {
-			if (data.userid>userNum)
-				userNum=data.userid;
-			if (data.itemid>movieNum)
-				movieNum=data.itemid;
-		}
+//		for (RatingData data:training) {
+//			if (data.userid>userNum)
+//				userNum=data.userid;
+//			if (data.itemid>movieNum)
+//				movieNum=data.itemid;
+//		}
+//		for (RatingData data:testing) {
+//			if (data.userid>userNum)
+//				userNum=data.userid;
+//			if (data.itemid>movieNum)
+//				movieNum=data.itemid;
+//		}
 	}
 	
 	public void loadMovieData(String filename) {
@@ -109,12 +108,34 @@ public class ENMF {
 
 	void initFeatureVector()
 	{
-		logger.log("lrate1="+lrate1+",lrate2="+lrate2+",lambda="+lambda+",lambda1="+lambda1+",lambda2="+lambda2+",lambda3="+lambda3);
-		logger.log("use sigmoid: "+useSigmoid);
-		logger.log("use bias: "+useBias);
-		logger.log("use sum: "+useSum);
-		logger.log("use user info: "+useUserInfo);
-		logger.log("use movie info: "+useMovieInfo);
+		if (currentFold==0) {
+			logger.log(userNum+" uses, "+movieNum+" movies");
+			logger.log("lrate1="+lrate1+",lrate2="+lrate2+",lambda="+lambda+",lambda1="+lambda1+",lambda2="+lambda2+",lambda3="+lambda3);
+			logger.log("Function used in user matrix: "+useFunction);
+			logger.log("Function used in movie matrix: "+movieFunction);
+			logger.log("use bias: "+useBias);
+			logger.log("use sum: "+useSum);
+			logger.log("use user info: "+useUserInfo);
+			logger.log("use movie info: "+useMovieInfo);
+		}
+		logger.log("fold "+currentFold);
+		
+		for (RatingData data:training) {
+			if (data.userid>userNum)
+				userNum=data.userid;
+			if (data.itemid>movieNum)
+				movieNum=data.itemid;
+		}
+		for (RatingData data:testing) {
+			if (data.userid>userNum)
+				userNum=data.userid;
+			if (data.itemid>movieNum)
+				movieNum=data.itemid;
+		}
+		
+		vRMSE=0;
+		tRMSE=0;
+		
 	    fuser=new double[userNum+1][K];
 	    fmovie=new double[movieNum+1][K];
 	    
@@ -176,8 +197,13 @@ public class ENMF {
 	    	}
 	    }
 	    
-	    logger.log(userNum+" uses, "+movieNum+" movies");
-	     
+	}
+	
+	void loadCurrentFold() {
+		training=allData.get(currentFold).get(0);
+		testing=allData.get(currentFold).get(1);
+		initFeatureVector();
+		currentFold++;
 	}
 	
 	 
@@ -198,56 +224,20 @@ public class ENMF {
 	    return sum;
 	}
 	
-//	double predict0(int userid,int movieid)
-//	{
-//	    double sum=0;
-//	    for(int i=0;i<K;i++)
-//	        sum+=fuser[userid][i]*fmovie[movieid][i];
-//	    return sum;
-//	}
-	
 	double fx(double x) {
-		if (useSigmoid)
-			return sigmoid(x);
-		else
-			return x;
+		return useFunction.f(x);
 	}
 	
 	double fy(double y) {
-		if (useSigmoid)
-			return sigmoid(y);
-		else
-			return y;
+		return movieFunction.f(y);
 	}
 		
 	double fxDiff(double x) {
-		if (useSigmoid)
-			return Math.exp(x)/Math.pow((1+Math.exp(x)),2);
-		else
-			return 1;
+		return useFunction.diff(x);
 	}
 	
 	double fyDiff(double y) {
-		if (useSigmoid)
-			return sigmoidDiff(y);
-		else
-			return 1;
-	}
-	
-	double sigmoidDiff(double y) {
-		double r=Math.exp(y)/Math.pow((1+Math.exp(y)),2);
-//		 if (Double.isNaN(r)) {
-//		    	r=0;
-//		    }
-		return r;
-	}
-	
-	double sigmoid(double x) {
-		double r= 1d/(1+Math.exp(-x));
-		if (Double.isNaN(r)) {
-	    	System.out.println("Nan");
-	    }
-		return r;
+		return movieFunction.diff(y);
 	}
 	
 	void updateMovies(int movieid,double[] oldValues) {
@@ -372,7 +362,7 @@ public class ENMF {
 	        vrmse+=err*err;
 	    }
 	    vrmse=Math.sqrt(vrmse/testing.size());
-	    logger.log("Training Set RMSE:"+vrmse,print);
+	    logger.log("Validation Set RMSE:"+vrmse,print);
 	    return vrmse;
 	}
 	
@@ -383,65 +373,123 @@ public class ENMF {
 		System.out.println();
 	}
 	
-	static public void run(double lrate1,double lrate2, double lambda,double lambda1,double lambda2, double lambda3,int iteration, boolean print) {
-		ENMF sigmoid=new ENMF();
-		sigmoid.loadData(DATA_PATH+"ratings.dat");
+	static public void run(double lrate1,double lrate2, double lambda,double lambda1,double lambda2, double lambda3,Function userFunction, Function movieFunction, int iteration, int fold, boolean print) {
+		ENMF enmf=new ENMF();
+		enmf.loadData(DATA_PATH+"ratings.dat",fold);
 //		sigmoid.loadData("u1.base", "u1.test");
-		sigmoid.normalize();
-		sigmoid.lrate1=lrate1;
-		sigmoid.lrate2=lrate2;
-		sigmoid.lambda=lambda;
-		sigmoid.lambda1=lambda1;
+//		enmf.normalize();
+		enmf.lrate1=lrate1;
+		enmf.lrate2=lrate2;
+		enmf.lambda=lambda;
+		enmf.lambda1=lambda1;
 		if (lambda2==0) {
-			sigmoid.useBias=false;
+			enmf.useBias=false;
 		} else {
-			sigmoid.useBias=true;
-			sigmoid.lambda2=lambda2;
+			enmf.useBias=true;
+			enmf.lambda2=lambda2;
 		}
 		if (lambda3==0) {
 		} else {
-			sigmoid.lambda3=lambda3;
-			sigmoid.loadMovieData(DATA_PATH+"movies.dat");
-			sigmoid.loadUserData(DATA_PATH+"users.dat");
+			enmf.lambda3=lambda3;
+			enmf.loadMovieData(DATA_PATH+"movies.dat");
+			enmf.loadUserData(DATA_PATH+"users.dat");
 		}
-	    sigmoid.initFeatureVector();
-	    double tRMSE=1000;
-	    double vRMSE=1000;
-	    for(int i=0;i<iteration;i++)
-	    {
-	    	sigmoid.logger.log("iteration "+i,print);
-
-	    	sigmoid.interation();
-	        double newTRMSE=sigmoid.trainRMSE(print);
-	        double newVRMSE=sigmoid.validationRMSE(print);
-//	        if (tRMSE<newTRMSE)
-//	        	break;
-//	        if (vRMSE<newVRMSE)
-//	        	break;
-	        tRMSE=newTRMSE;
-	        vRMSE=newVRMSE;
+		enmf.useFunction=userFunction;
+		enmf.movieFunction=movieFunction;
+//		enmf.function=false;
+	    for (int k=0;k<fold;k++) {
+	    	enmf.loadCurrentFold();
+		    double tRMSE=1000;
+		    double vRMSE=1000;
+		    for(int i=0;i<iteration;i++)
+		    {
+		    	enmf.logger.log("iteration "+i,print);
+	
+		    	enmf.interation();
+		        double newTRMSE=enmf.trainRMSE(print);
+		        double newVRMSE=enmf.validationRMSE(print);
+	//	        if (tRMSE<newTRMSE)
+	//	        	break;
+	//	        if (vRMSE<newVRMSE)
+	//	        	break;
+		        tRMSE=newTRMSE;
+		        vRMSE=newVRMSE;
+		    }
+		    enmf.tRMSE+=tRMSE;
+		    enmf.vRMSE+=vRMSE;
 	    }
-	    sigmoid.logger.log("finish");
-	    sigmoid.trainRMSE(true);
-	    sigmoid.validationRMSE(true);
+	    enmf.logger.log("finish "+fold +"-fold cross validation");
+	    enmf.trainRMSE(true);
+	    enmf.validationRMSE(true);
 	}
 	
+	public static void run(double lrate,double lambda,Function userFunction, Function movieFunction, int iteration, int fold, boolean print) {
+		run(lrate,lrate,lambda,0,0,0,userFunction,movieFunction,iteration,fold,print);
+	}
+	
+	public static void run(double lrate1,double lrate2,double lambda,Function userFunction, Function movieFunction, int iteration, int fold, boolean print) {
+		run(lrate1,lrate2,lambda,0,0,0,userFunction,movieFunction,iteration,fold,print);
+	}
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		Movie.loadGenres(DATA_PATH+"genres.txt");
 		User.loadFeatures(DATA_PATH+"features.txt");
-		double lrate1=1.5;
+//		double lrate1=1.5;
+//		double lrate2=1.5;
+//		double lambda=0.02;
+//		double lambda1=0;//0.0001; //sum
+//		double lambda2=0; //bias
+//		double lambda3=0;//0.00005; //movie and user
+		double lrate1=0.1;
 		double lrate2=1.5;
 		double lambda=0.02;
-		double lambda1=0.0001; //sum
-		double lambda2=0; //bias
-		double lambda3=0.00005; //movie and user
 		int iteration=200;
-		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,true);
-
+		int fold=5;
+//		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,fold,true);
+		Function userFunction=Function.Square;//Function.Sigmoid;
+		Function movieFunction=Function.Sigmoid;
+		run(lrate1,lrate2,lambda,userFunction,movieFunction,iteration,fold,true);
 	}
 
 }
 
+enum Function {
+	Sigmoid,Square,None;
+	
+	public double f(double x) {
+		switch (this) {
+		case Sigmoid:
+			return 1d/(1+Math.exp(-x));
+		case Square:
+			return x*x;
+		default:
+			return x;
+		}
+	}
+	
+	public double diff(double x) {
+		switch (this) {
+		case Sigmoid:
+			return Math.exp(x)/Math.pow((1+Math.exp(x)),2);
+		case Square:
+			return 2*x;
+		default:
+			return 1;
+		}
+	}
+	
+	public String toString() {
+		switch (this) {
+		case Sigmoid:
+			return "sigmoid";
+		case Square:
+			return "squrae";
+		case None:
+			return "None";
+		default:
+			return "";
+		}
+	}
+}
