@@ -382,18 +382,21 @@ public class ENMF {
 		enmf.lrate2=lrate2;
 		enmf.lambda=lambda;
 		enmf.lambda1=lambda1;
+		if (lambda1==0) {
+			enmf.useSum=false;
+		}
+		enmf.lambda2=lambda2;
 		if (lambda2==0) {
 			enmf.useBias=false;
 		} else {
 			enmf.useBias=true;
-			enmf.lambda2=lambda2;
 		}
 		if (lambda3==0) {
 		} else {
-			enmf.lambda3=lambda3;
 			enmf.loadMovieData(DATA_PATH+"movies.dat");
 			enmf.loadUserData(DATA_PATH+"users.dat");
 		}
+		enmf.lambda3=lambda3;
 		enmf.useFunction=userFunction;
 		enmf.movieFunction=movieFunction;
 //		enmf.function=false;
@@ -419,8 +422,8 @@ public class ENMF {
 		    enmf.vRMSE+=vRMSE;
 	    }
 	    enmf.logger.log("finish "+fold +"-fold cross validation");
-	    enmf.trainRMSE(true);
-	    enmf.validationRMSE(true);
+	    enmf.logger.log("Training Set RMSE:"+enmf.tRMSE/enmf.fold);
+	    enmf.logger.log("Validation Set RMSE:"+enmf.vRMSE/enmf.fold);
 	}
 	
 	public static void run(double lrate,double lambda,Function userFunction, Function movieFunction, int iteration, int fold, boolean print) {
@@ -442,13 +445,13 @@ public class ENMF {
 //		double lambda1=0;//0.0001; //sum
 //		double lambda2=0; //bias
 //		double lambda3=0;//0.00005; //movie and user
-		double lrate1=0.1;
-		double lrate2=1.5;
+		double lrate1=1;
+		double lrate2=1;
 		double lambda=0.02;
 		int iteration=200;
 		int fold=5;
 //		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,fold,true);
-		Function userFunction=Function.Square;//Function.Sigmoid;
+		Function userFunction=Function.Sigmoid;//Function.Sigmoid;
 		Function movieFunction=Function.Sigmoid;
 		run(lrate1,lrate2,lambda,userFunction,movieFunction,iteration,fold,true);
 	}
