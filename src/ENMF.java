@@ -132,10 +132,6 @@ public class ENMF {
 			if (data.itemid>movieNum)
 				movieNum=data.itemid;
 		}
-		
-		vRMSE=0;
-		tRMSE=0;
-		
 	    fuser=new double[userNum+1][K];
 	    fmovie=new double[movieNum+1][K];
 	    
@@ -399,6 +395,8 @@ public class ENMF {
 		enmf.lambda3=lambda3;
 		enmf.useFunction=userFunction;
 		enmf.movieFunction=movieFunction;
+		enmf.tRMSE=0;
+		enmf.vRMSE=0;
 //		enmf.function=false;
 	    for (int k=0;k<fold;k++) {
 	    	enmf.loadCurrentFold();
