@@ -466,7 +466,7 @@ public class ENMF {
 		double lrate1=1;
 		double lrate2=1;
 		double lambda=0.02;
-		int iteration=1000;
+		int iteration=250;
 		int fold=5;
 //		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,fold,true);
 		Function userFunction=Function.Sigmoid;//Function.Sigmoid;
