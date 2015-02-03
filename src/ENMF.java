@@ -29,7 +29,7 @@ public class ENMF {
 
 	
 	double X[];
-	int K=20;
+	int K=35;
 	double[] bu;
 	double[] bi;
 	double avg=0;
@@ -110,6 +110,7 @@ public class ENMF {
 	{
 		if (currentFold==0) {
 			logger.log(userNum+" uses, "+movieNum+" movies");
+			logger.log("K="+K);
 			logger.log("lrate1="+lrate1+",lrate2="+lrate2+",lambda="+lambda+",lambda1="+lambda1+",lambda2="+lambda2+",lambda3="+lambda3);
 			logger.log("Function used in user matrix: "+useFunction);
 			logger.log("Function used in movie matrix: "+movieFunction);
@@ -213,7 +214,24 @@ public class ENMF {
 //	    sum=Math.max(0d,sum);
 //	    sum=Math.min(1d,sum);
 //	    sum=sigmoid(sum);
-	    
+	    sum=Function.SigmoidP.f(sum);
+	    if (Double.isNaN(sum)) {
+	    	System.out.println("Nan");
+	    }
+	    return sum;
+	}
+	
+	double predict0(int userid,int movieid)
+	{
+	    double sum=0;
+	    for(int i=0;i<K;i++)
+	        sum+=fx(fuser[userid][i])*fy(fmovie[movieid][i]);
+	    if (useBias)
+	    	sum+=bu[userid]+bi[movieid]+avg;
+//	    sum=Math.max(0d,sum);
+//	    sum=Math.min(1d,sum);
+//	    sum=sigmoid(sum);
+//	    sum=Function.Sigmoid.f(sum);
 	    if (Double.isNaN(sum)) {
 	    	System.out.println("Nan");
 	    }
@@ -258,7 +276,9 @@ public class ENMF {
 	{
 		double[] oldMovieValues=fmovie[movieid].clone();
 		double[] oldUserValues=fuser[userid].clone();
-	    double err=rate-predict(userid, movieid);
+		double r=predict0(userid, movieid);
+	    double err=rate-Function.SigmoidP.f(r);
+	    double c=Function.SigmoidP.diff(r);
 	    if (Double.isNaN(err)) {
 	    	System.out.println("Nan");
 	    }
@@ -281,11 +301,11 @@ public class ENMF {
 	    	double fy=fy(fmovie[movieid][i]);
 	    	double fyDiff=fyDiff(fmovie[movieid][i]);
 	        
-	        double userDelta=err*fy-lambda*fx;
+	        double userDelta=err*fy*c-lambda*fx;
 	        if (useSum) {
 	        	userDelta-=lambda1*(sumx-1);
 	        }
-	        double movieDelta=err*fx-lambda*fy;
+	        double movieDelta=err*fx*c-lambda*fy;
 	        if (useMovieInfo) {
 	        	double t=0;
 	        	Integer[] genres=movies[movieid].features;
@@ -446,7 +466,7 @@ public class ENMF {
 		double lrate1=1;
 		double lrate2=1;
 		double lambda=0.02;
-		int iteration=200;
+		int iteration=1000;
 		int fold=5;
 //		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,fold,true);
 		Function userFunction=Function.Sigmoid;//Function.Sigmoid;
@@ -457,7 +477,7 @@ public class ENMF {
 }
 
 enum Function {
-	Sigmoid,Square,None;
+	Sigmoid,Square,None,SigmoidP;
 	
 	public double f(double x) {
 		switch (this) {
@@ -465,6 +485,8 @@ enum Function {
 			return 1d/(1+Math.exp(-x));
 		case Square:
 			return x*x;
+		case SigmoidP:
+			return 1d/(1+Math.exp(-6*(x-.5)));
 		default:
 			return x;
 		}
@@ -476,6 +498,8 @@ enum Function {
 			return Math.exp(x)/Math.pow((1+Math.exp(x)),2);
 		case Square:
 			return 2*x;
+		case SigmoidP:
+			return 6*Math.exp(x)/Math.pow((1+Math.exp(x)),2);
 		default:
 			return 1;
 		}
