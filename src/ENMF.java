@@ -394,6 +394,7 @@ public class ENMF {
 		enmf.loadData(DATA_PATH+"ratings.dat",fold);
 //		sigmoid.loadData("u1.base", "u1.test");
 //		enmf.normalize();
+		enmf.fold=fold;
 		enmf.lrate1=lrate1;
 		enmf.lrate2=lrate2;
 		enmf.lambda=lambda;
@@ -429,8 +430,8 @@ public class ENMF {
 		    	enmf.interation();
 		        double newTRMSE=enmf.trainRMSE(print);
 		        double newVRMSE=enmf.validationRMSE(print);
-	//	        if (tRMSE<newTRMSE)
-	//	        	break;
+		        if (tRMSE<newTRMSE)
+		        	break;
 	//	        if (vRMSE<newVRMSE)
 	//	        	break;
 		        tRMSE=newTRMSE;
@@ -467,7 +468,7 @@ public class ENMF {
 		double lrate2=1;
 		double lambda=0.02;
 		int iteration=250;
-		int fold=5;
+		int fold=10;
 //		run(lrate1,lrate2,lambda,lambda1,lambda2,lambda3,iteration,fold,true);
 		Function userFunction=Function.Sigmoid;//Function.Sigmoid;
 		Function movieFunction=Function.Sigmoid;
@@ -486,7 +487,7 @@ enum Function {
 		case Square:
 			return x*x;
 		case SigmoidP:
-			return 1d/(1+Math.exp(-6*(x-.5)));
+			return 1d/(1+Math.exp(-7*(x-.5)));
 		default:
 			return x;
 		}
@@ -499,7 +500,7 @@ enum Function {
 		case Square:
 			return 2*x;
 		case SigmoidP:
-			return 6*Math.exp(x)/Math.pow((1+Math.exp(x)),2);
+			return 7*Math.exp(7*(x-.5))/Math.pow((1+Math.exp(7*(x-.5))),2);
 		default:
 			return 1;
 		}
